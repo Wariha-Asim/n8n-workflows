@@ -1,0 +1,308 @@
+{
+  "name": "Job Application Tracker with Notion",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json[\"Position\"]}}",
+                    "rightValue": "Front-End Developer Intern",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "af0eff36-9e37-4964-a84f-0d56f2bbe3e8"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "aa64a686-778b-4c19-aa7a-2c9a5820867d",
+                    "leftValue": "={{$json[\"Position\"]}}",
+                    "rightValue": "Artificial Intelligence Intern",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a9ec2718-838c-4e46-8d32-4cc240904616",
+                    "leftValue": "={{$json[\"Position\"]}}",
+                    "rightValue": "Machine Learning Intern",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        80,
+        160
+      ],
+      "id": "44b983a7-802e-4852-9b84-927e4d0dd63d",
+      "name": "Position Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Timestamp\": item.json[\"Timestamp\"],\n      \"Full Name\": item.json[\"Full Name\"],\n      \"Email\": item.json[\"Email\"],\n      \"Position\": item.json[\"Position\"],\n      \"Resume\": item.json[\"Resume\"],\n      \"Whatsapp Number\": item.json[\"Whatsapp Number\"]\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -144
+      ],
+      "id": "97454c59-92d2-48d6-bc05-ff4ea53fb034",
+      "name": "Format Data"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEETS_DOCUMENT_ID",
+          "mode": "list",
+          "cachedResultName": "Job Application Form (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEETS_DOCUMENT_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 667080607,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEETS_DOCUMENT_ID/edit#gid=667080607"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -128
+      ],
+      "id": "a48e0abd-18aa-4e05-a3e7-6b39dc05a3f9",
+      "name": "Google Sheets Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=Application Received for {{ $json.Position }}",
+        "message": "=Hello {{ $json['Full Name'] }},  Thank you for applying for the {{ $json.Position }} role.We have received your application.  \n📅 Timestamp: {{$json[\"Timestamp\"]}}   📱 Whatsapp: {{ $json['Whatsapp Number'] }}\n📄 Resume: {{ $json.Resume }}\nIf shortlisted, our HR team will contact you soon.\nMeanwhile, feel free to reply to this email for any queries.\n\nBest Regards,   \nHR Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        -176
+      ],
+      "id": "04004424-aecb-4fdc-b7bc-3a2b5e175483",
+      "name": "Email to Candidate"
+    },
+    {
+      "parameters": {
+        "sendTo": "=hr@example.com",
+        "subject": "=New Job Application from {{$json[\"Full Name\"]}}",
+        "message": "=Hi Hr! following candidate have applied to your job application form\nDetails:\nCandidate Name: {{$json[\"Full Name\"]}}\nEmail: {{$json[\"Email\"]}}\nPosition Applied: {{$json[\"Position\"]}}\nResume: {{$json[\"Resume\"]}}\nTimestamp: {{$json[\"Timestamp\"]}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        -32
+      ],
+      "id": "6e1f5de6-d21c-4ff5-bc86-e9ef58a12489",
+      "name": "Email to HR",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Candidate Applied! 🎉\n\n**Name:** {{$json[\"Full Name\"]}}\n**Email:** {{$json[\"Email\"]}}\n**Position:** {{$json[\"Position\"]}}\n**Resume Link:** {{$json[\"Resume\"]}}\n**Whatsapp Number:** {{$json[\"Whatsapp Number\"]}}\n**Submitted At:** {{$json[\"Timestamp\"]}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        432,
+        128
+      ],
+      "id": "5eec255b-12d2-4464-a02a-cf078761574c",
+      "name": "Discord Notification"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "NOTION_DATABASE_ID",
+          "mode": "list",
+          "cachedResultName": "Job Application Tracker",
+          "cachedResultUrl": "https://www.notion.so/NOTION_DATABASE_ID"
+        },
+        "title": "={{ $json['Full Name'] }}",
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "property": "Email",
+              "value": "={{ $json.Email }}"
+            },
+            {
+              "property": "Name",
+              "value": "={{ $json['Full Name'] }}"
+            },
+            {
+              "property": "Position",
+              "value": "={{ $json.Position }}"
+            },
+            {
+              "property": "Resume",
+              "value": "={{ $json.Resume }}"
+            },
+            {
+              "property": "Whatsapp Number",
+              "value": "={{ $json['Whatsapp Number'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        128
+      ],
+      "id": "92fe98e1-3d26-4088-8358-c342881f5a2e",
+      "name": "Create Notion Database Entry"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Position Switch": {
+      "main": [
+        [
+          {
+            "node": "Discord Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data": {
+      "main": [
+        [
+          {
+            "node": "Email to Candidate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email to HR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Position Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord Notification": {
+      "main": [
+        [
+          {
+            "node": "Create Notion Database Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "WORKFLOW_ID",
+  "tags": []
+}
