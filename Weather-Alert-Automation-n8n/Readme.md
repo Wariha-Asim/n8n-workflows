@@ -23,7 +23,8 @@ Before importing the workflow, make sure you have:
 
 ## ⚙️ Setup Instructions
 1. Clone this repository:
-   git clone https://github.com/Wariha-Asim/n8n-workflows/new/main/Weather-Alert-Automation-n8n
+   git clone git clone https://github.com/Wariha-Asim/n8n-workflows.git
+cd n8n-workflows/Weather-Alert-Automation-n8n
 
 Open n8n → Import the weather-alert-workflow.json file.
 
