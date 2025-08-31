@@ -32,9 +32,7 @@ Setup Guide
 
 ## Clone the Repository:
 
-git clone https://github.com/Wariha-Asim/n8n-workflows-project.git
-cd n8n-workflows-project/Job Application Automation Tracker
-
+git clone https://github.com/Wariha-Asim/n8n-workflows/tree/main/Job%20Application%20Automation%20Tracker
 
 ## Import Workflow into n8n:
 
