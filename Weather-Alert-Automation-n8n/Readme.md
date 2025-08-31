@@ -1,4 +1,3 @@
-README.md 
 # 🌦️ Weather Alert Automation Workflow (n8n)
 
 This repository contains an **n8n workflow** that fetches weather data for multiple cities using the OpenWeatherMap API, evaluates conditions (e.g., high temperature or cloudy weather), sends alerts to Discord, and logs results into Google Sheets.
