@@ -4,15 +4,15 @@ This repository contains an n8n automation workflow that streamlines job applica
 
 ## Features
 
-# Google Sheets Trigger: Automatically detects new job applications submitted via Google Forms.
+Google Sheets Trigger: Automatically detects new job applications submitted via Google Forms.
 
-# Email Notifications: Sends acknowledgment emails to candidates and notifies HR of new applications.
+Email Notifications: Sends acknowledgment emails to candidates and notifies HR of new applications.
 
-# Position-Based Workflow: Routes applications according to the position applied for using a switch node.
+Position-Based Workflow: Routes applications according to the position applied for using a switch node.
 
-# Discord Notifications: Sends detailed candidate application info to a Discord channel.
+Discord Notifications: Sends detailed candidate application info to a Discord channel.
 
-# Notion Database Integration: Logs every application into a Notion database with candidate details including Name, Email, Position, Resume, and WhatsApp Number.
+Notion Database Integration: Logs every application into a Notion database with candidate details including Name, Email, Position, Resume, and WhatsApp Number.
 
 ## Prerequisites
 
