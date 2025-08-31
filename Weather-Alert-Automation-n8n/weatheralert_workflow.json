@@ -1,0 +1,192 @@
+{
+  "name": "weather alert for multiple cities",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://api.openweathermap.org/data/2.5/weather?q={{$json[\"city\"]}}&appid={{OPENWEATHER_API_KEY}}&units=metric",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-256, -96],
+      "id": "f26fda9d-4ad3-45c8-bc59-f410c408433c",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cities = [\n  \"Karachi\", \"Lahore\", \"Islamabad\", \"Quetta\", \n  \"Peshawar\", \"Sialkot\", \"Multan\", \"Gujranwala\", \n  \"Sukkur\", \"Rawalpindi\"\n];\n\nreturn cities.map(city => {\n  return { json: { city: city } };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-464, -96],
+      "id": "a8e3ba60-1ce1-4acc-b9df-a5c287aea84c",
+      "name": "func node for cities1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "date",
+              "value": "={{$now}}",
+              "type": "string"
+            },
+            {
+              "name": "city",
+              "value": "={{$json[\"name\"]}}",
+              "type": "string"
+            },
+            {
+              "name": "temperature",
+              "value": "={{$json[\"main\"][\"temp\"]}}",
+              "type": "string"
+            },
+            {
+              "name": "condition",
+              "value": "={{$json[\"weather\"][0][\"description\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-16, -80],
+      "id": "ee26dae9-cb4f-4af4-87f9-630ce391008c",
+      "name": "set fields for multiple cities1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{$json[\"temperature\"].toNumber()}}",
+              "rightValue": 30,
+              "operator": { "type": "number", "operation": "gt" }
+            },
+            {
+              "leftValue": "={{ $json.condition }}",
+              "rightValue": "overcast clouds",
+              "operator": { "type": "string", "operation": "contains" }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [224, -80],
+      "id": "3b70292e-0fbd-4b36-8e42-d30b256e998c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 12 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-688, -80],
+      "id": "a8dbb523-e18f-4a15-bd83-6b5d68c8db09",
+      "name": "Schedule Trigger weather alert for multiple cities"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🌡 Weather Alert: Temperature for {{ $json.city }} is {{ $json.temperature }}°C, which is above 30! Weather condition: {{ $json.condition }}. Stay safe and hydrated! 💧",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [592, -112],
+      "id": "e2155cef-b2c0-4307-940c-b3dc12448c52",
+      "name": "Discord",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "{{DISCORD_WEBHOOK_ID}}",
+          "name": "Discord Webhook (Replace in n8n)"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [464, 48],
+      "id": "3eb69081-dcc6-4065-aaf0-f6f4e59bcdf1",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": "{{GOOGLE_SHEET_ID}}",
+        "sheetName": "Sheet1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date/Time": "={{ $json.date }}",
+            "City": "={{ $json.city }}",
+            "Temperature": "={{ $json.temperature }}",
+            "Condition": "={{ $json.condition }}"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [704, 32],
+      "id": "6b91f752-e9d2-4db1-b0fc-a4d2d1bf40c9",
+      "name": "Append or update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_AUTH_ID}}",
+          "name": "Google Sheets account (Replace in n8n)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "HTTP Request2": {
+      "main": [
+        [
+          { "node": "set fields for multiple cities1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "func node for cities1": {
+      "main": [
+        [{ "node": "HTTP Request2", "type": "main", "index": 0 }]
+      ]
+    },
+    "set fields for multiple cities1": {
+      "main": [
+        [{ "node": "If", "type": "main", "index": 0 }]
+      ]
+    },
+    "If": {
+      "main": [
+        [{ "node": "Discord", "type": "main", "index": 0 }],
+        [{ "node": "Merge", "type": "main", "index": 1 }]
+      ]
+    },
+    "Schedule Trigger weather alert for multiple cities": {
+      "main": [
+        [{ "node": "func node for cities1", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [{ "node": "Append or update row in sheet2", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
