@@ -1,0 +1,158 @@
+{
+  "name": "HR/Operations",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-768, 32],
+      "id": "69b35d4f-4445-4312-ad97-091e210d5945",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an HR Operations assistant. Summarize employee attendance, payroll status, and meetings in a concise, professional format suitable for internal HR review.  \n\nEmployee Data:  \n- Name: {{ $json.EmployeeName }} |  \n- Attendance: {{ $json.Attendance }} |  \n- Payroll Status: {{ $json.PayrollStatus }} |  \n- Meetings Scheduled: {{ $json.MeetingsScheduled }} |  \n- Productivity Score: {{ $json.ProductivityScore }} |  \n- Priority: {{ $json.Priority }} |  \n- Action Required: {{ $json.ActionRequired }} |  \n\nFormat the summary in a single neat line per employee, using the \"|\" separator between each field. Make it actionable where needed (e.g., highlight if payroll needs processing or follow-ups are required for absenteeism). Keep each summary under 3 lines.\n\nExample output:  \n\"Ali Khan | Present | Payroll Paid | 2 meetings | Productivity: 100 | Priority: Normal | Action: None\"  \n\"Sara Ahmed | Absent | Payroll Pending | 1 meeting | Productivity: 30 | Priority: High | Action: Follow-up & payroll processing\"\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [-160, 32],
+      "id": "a5e64d46-5d22-4509-99ef-f441b372937b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [-128, 288],
+      "id": "ffc9ca01-f673-4c10-9de8-5aef1bb94814",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "sendTo": "=hr@company.com",
+        "subject": "=HR Daily Update - All Employees | Attendance & Payroll Summary | {{ $now.format(\"DD\")}}\n",
+        "emailType": "text",
+        "message": "=Hello HR Team,\n\nHere is the daily attendance and payroll summary for all employees:\n\n{{ $json.CombinedSummary }}\n\nBest regards,\nHR Automation Bot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [480, 32],
+      "id": "92cc4a80-fdd9-4ba1-9fe2-f19ed26ec12e",
+      "name": "send email to hr"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "HR_Operations",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Email": "={{ $('Employee Data').item.json.Email }}",
+            "EmployeeID": "={{ $('Employee Data').item.json.EmployeeID }}",
+            "Attendance": "={{ $('Process Data').item.json.Attendance }}",
+            "PayrollStatus": "={{ $('Process Data').item.json.PayrollStatus }}",
+            "EmployeeName": "={{ $('Employee Data').item.json.EmployeeName }}",
+            "MeetingsScheduled": "={{ $('Employee Data').item.json.MeetingsScheduled }}",
+            "LastProcessed": "={{$now}}",
+            "Status": "Processed"
+          },
+          "matchingColumns": ["EmployeeID"],
+          "schema": [
+            {"id": "EmployeeID", "displayName": "EmployeeID", "type": "string"},
+            {"id": "EmployeeName", "displayName": "EmployeeName", "type": "string"},
+            {"id": "Email", "displayName": "Email", "type": "string"},
+            {"id": "Attendance", "displayName": "Attendance", "type": "string"},
+            {"id": "PayrollStatus", "displayName": "PayrollStatus", "type": "string"},
+            {"id": "MeetingsScheduled", "displayName": "MeetingsScheduled", "type": "string"},
+            {"id": "LastProcessed", "displayName": "LastProcessed", "type": "string"},
+            {"id": "Status", "displayName": "Status", "type": "string"},
+            {"id": "row_number", "displayName": "row_number", "type": "number"}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [288, 288],
+      "id": "eccb52b0-4268-42d5-a75a-a7767932def7",
+      "name": "update data in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HR Operations - Attendance & Payroll Analysis\nconst items = $input.all();\nconst processedItems = items.map(item => {\n  const attendance = item.json.Attendance;\n  const payrollStatus = item.json.PayrollStatus;\n  const meetings = parseInt(item.json.MeetingsScheduled) || 0;\n\n  let productivityScore = 0;\n  if (attendance === 'Present') productivityScore += 60;\n  if (payrollStatus === 'Paid') productivityScore += 20;\n  productivityScore += Math.min(meetings * 10, 20);\n\n  let priority = 'Normal';\n  if (attendance === 'Absent' && payrollStatus === 'Pending') priority = 'High';\n  else if (payrollStatus === 'Pending') priority = 'Medium';\n\n  let actionRequired = 'None';\n  if (attendance === 'Absent') actionRequired = 'Follow-up needed';\n  if (payrollStatus === 'Pending') actionRequired = 'Payroll processing';\n\n  return { json: { ...item.json, ProductivityScore: productivityScore, Priority: priority, ActionRequired: actionRequired, ShouldProcess: item.json.Status === 'Active' } };\n});\nreturn processedItems.filter(item => item.json.ShouldProcess);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-368, 32],
+      "id": "352365fb-80be-420e-9e2c-f9ecc8abefc4",
+      "name": "Process Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "HR_Operations",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-576, 32],
+      "id": "0d29c796-d545-415b-babc-84c8cc4f85ff",
+      "name": "Employee Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst allSummaries = items.map(item => item.json.output).join(\"\\n\\n\");\nreturn [{ json: { CombinedSummary: allSummaries } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 32],
+      "id": "8116b69d-be2a-41c0-b618-05a9724a9b1e",
+      "name": "AggregateSummaries"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {"main": [[{"node": "Employee Data", "type": "main", "index": 0}]]},
+    "AI Agent": {"main": [[{"node": "AggregateSummaries", "type": "main", "index": 0}, {"node": "update data in sheet", "type": "main", "index": 0}]]},
+    "Google Gemini Chat Model": {"ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]},
+    "Process Data": {"main": [[{"node": "AI Agent", "type": "main", "index": 0}]]},
+    "Employee Data": {"main": [[{"node": "Process Data", "type": "main", "index": 0}]]},
+    "AggregateSummaries": {"main": [[{"node": "send email to hr", "type": "main", "index": 0}]]},
+    "send email to hr": {"main": [[]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "safe-share",
+  "meta": {"instanceId": "placeholder-instance"}
+}
