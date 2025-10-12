@@ -1,0 +1,248 @@
+{
+  "name": "Marketing & Lead Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "1e18a1d8-d6c3-4ee2-be26-dc3bb8fd4bfa",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a marketing expert. Write a short, persuasive follow-up email for this lead (keep under 4 lines).\n\nLead:\nName: {{ $json.LeadName }}\nSource: {{ $json.LeadSource }}\nStage: {{ $json.LeadStage }}\nCampaign: {{ $json.Campaign }}\nAdSpent: ${{ $json.AdSpent }}\nLeadScore: {{ $json.LeadScore }}\n\nWrite a single email body only (no signature). Add one soft call-to-action (e.g., schedule a demo, reply for pricing).\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -16
+      ],
+      "id": "48d9ab91-4295-4807-88be-fe3b5afa3e38",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        624,
+        240
+      ],
+      "id": "581b2bcc-afe1-42f3-8d1b-b5909e3f09a7",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Lead Scoring & ROI Calculator').item.json.Email }}",
+        "subject": "= {{ $('Lead Scoring & ROI Calculator').item.json.Priority }} Priority: Follow-up for {{ $('Lead Scoring & ROI Calculator').item.json.LeadName }} — {{ $('Lead Scoring & ROI Calculator').item.json.Campaign }}",
+        "emailType": "text",
+        "message": "=\n{{ $json.output }}\n---\n📊 Marketing Analytics:\n• Lead Score: {{ $('Lead Scoring & ROI Calculator').item.json.LeadScore }}/100  \n• Source: {{ $('Lead Scoring & ROI Calculator').item.json.LeadSource }}\n• Stage: {{ $('Lead Scoring & ROI Calculator').item.json.LeadStage }}\n• Campaign:  {{ $('Lead Scoring & ROI Calculator').item.json.Campaign }}\n• Ad Investment: {{ $('Lead Scoring & ROI Calculator').item.json.AdSpent }} \n• Estimated ROI: {{ $('Lead Scoring & ROI Calculator').item.json.ROI }}\n• Priority: {{ $('Lead Scoring & ROI Calculator').item.json.Priority }}\n\nBest regards,  \nMarketing Team\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1008,
+        -16
+      ],
+      "id": "3a270d34-574e-4ebe-bc77-89e07b0f9112",
+      "name": "send email to customers"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "Marketing_CRM",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "LeadID": "={{ $('Lead Scoring & ROI Calculator').item.json.LeadID }}",
+            "row_number": 0,
+            "LastContact": "={{$now}}",
+            "Status": "Done",
+            "Notes": "=Email sent on {{$now}}",
+            "LeadName": "={{ $('Lead Scoring & ROI Calculator').item.json.LeadName }}",
+            "Email": "={{ $('Lead Scoring & ROI Calculator').item.json.Email }}",
+            "LeadSource": "={{ $('Lead Scoring & ROI Calculator').item.json.LeadSource }}",
+            "LeadStage": "={{ $('Lead Scoring & ROI Calculator').item.json.LeadStage }}",
+            "Campaign": "={{ $('Lead Scoring & ROI Calculator').item.json.Campaign }}",
+            "AdSpent": "={{ $('Lead Scoring & ROI Calculator').item.json.AdSpent }}"
+          },
+          "matchingColumns": [
+            "LeadID"
+          ],
+          "schema": [
+            {"id": "LeadID","displayName": "LeadID","type": "string"},
+            {"id": "LeadName","displayName": "LeadName","type": "string"},
+            {"id": "Email","displayName": "Email","type": "string"},
+            {"id": "LeadSource","displayName": "LeadSource","type": "string"},
+            {"id": "LeadStage","displayName": "LeadStage","type": "string"},
+            {"id": "Campaign","displayName": "Campaign","type": "string"},
+            {"id": "AdSpent","displayName": "AdSpent","type": "string"},
+            {"id": "LastContact","displayName": "LastContact","type": "string"},
+            {"id": "Status","displayName": "Status","type": "string"},
+            {"id": "Notes","displayName": "Notes","type": "string"},
+            {"id": "row_number","displayName": "row_number","type": "number"}
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "ca587353-96fb-475e-ab3d-50a368b87f6e",
+      "name": "update data in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Marketing Lead Scoring & ROI Calculator\nconst items = $input.all();\n\nconst processedItems = items.map(item => {\n  const adSpent = parseInt(item.json.AdSpent) || 0;\n  const leadStage = item.json.LeadStage;\n  const leadSource = item.json.LeadSource;\n  let leadScore = 0;\n  if (leadStage === 'New') leadScore += 10;\n  if (leadStage === 'Contacted') leadScore += 30;\n  if (leadStage === 'Qualified') leadScore += 50;\n  if (leadStage === 'Hot') leadScore += 70;\n  if (leadStage === 'Customer') leadScore += 100;\n  if (leadSource === 'Referral') leadScore += 20;\n  if (leadSource === 'Website') leadScore += 15;\n  if (leadSource === 'Google Ads') leadScore += 10;\n  if (leadSource === 'Facebook Ad') leadScore += 10;\n  if (adSpent > 0) leadScore += Math.min(adSpent / 4, 30);\n  const estimatedValue = adSpent > 0 ? adSpent * 3 : 100;\n  const roi = adSpent > 0 ? ((estimatedValue - adSpent) / adSpent * 100).toFixed(1) + '%' : 'N/A';\n  let priority = 'LOW';\n  if (leadScore >= 70) priority = 'HIGH';\n  else if (leadScore >= 40) priority = 'MEDIUM';\n  return { json: { ...item.json, LeadScore: Math.min(leadScore, 100), EstimatedValue: estimatedValue, ROI: roi, Priority: priority, ShouldContact: leadScore >= 40 && item.json.Status === 'Active' } };\n});\nconst filteredItems = processedItems.filter(item => item.json.Priority === 'HIGH' || item.json.Priority === 'MEDIUM');\nreturn filteredItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        0
+      ],
+      "id": "fba5b4c5-00b1-4c46-965b-9019f28c3e5b",
+      "name": "Lead Scoring & ROI Calculator"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "Marketing_CRM",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        112,
+        0
+      ],
+      "id": "4bfed7ba-a676-4935-af36-0b5f6b824521",
+      "name": "Read marketing CRM"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read marketing CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "send email to customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send email to customers": {
+      "main": [
+        [
+          {
+            "node": "update data in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Scoring & ROI Calculator": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update data in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "Read marketing CRM": {
+      "main": [
+        [
+          {
+            "node": "Lead Scoring & ROI Calculator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0f4e4f05-34da-418a-87d8-e81955d90e88",
+  "meta": {
+    "instanceId": "placeholder-instance"
+  },
+  "id": "upQ7Ze1z33LwjwEZ",
+  "tags": []
+}
