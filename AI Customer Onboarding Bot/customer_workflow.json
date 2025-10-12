@@ -1,0 +1,159 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "0f105020-8f85-4f50-ba26-237187852eb2",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer onboarding specialist. Write a personalized follow-up email for {{ $json[\"CustomerName\"] }} who is currently at {{ $json[\"OnboardingStage\"] }} stage in the onboarding process. Keep it professional, helpful, and under 4 lines. Only output the email body.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [640, 0],
+      "id": "65d9a21d-3876-4049-a7f2-c4358207903b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [592, 240],
+      "id": "cbff99f1-f21c-4fcd-8367-469b19c690e4",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU",
+          "mode": "list",
+          "cachedResultName": "Customer_Onboarding",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [192, 0],
+      "id": "685433b8-2306-4ee1-bd5a-bd9474804c9b",
+      "name": "Read data from sheet"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Read data from sheet').item.json.Email }}",
+        "subject": "={{ $('Read data from sheet').item.json.CustomerName }} - Onboarding Update {{ $('Read data from sheet').item.json.OnboardingStage }}",
+        "emailType": "text",
+        "message": "=\n{{ $json.output }}\n\nBest regards,\nCustomer Success Team,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1040, 16],
+      "id": "f6c84901-9981-4e4d-abde-2ed4d649c20c",
+      "name": "Send email to customers"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU",
+          "mode": "list",
+          "cachedResultName": "Customer_Onboarding",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Read data from sheet').item.json.Email }}",
+            "CustomerName": "={{ $('Read data from sheet').item.json.CustomerName }}",
+            "OnboardingStage": "={{ $('Read data from sheet').item.json.OnboardingStage }}",
+            "LastContact": "={{$now }}",
+            "Status": "=Done"
+          },
+          "matchingColumns": ["Email"],
+          "schema": [
+            {"id": "CustomerName", "displayName": "CustomerName", "type": "string"},
+            {"id": "Email", "displayName": "Email", "type": "string"},
+            {"id": "OnboardingStage", "displayName": "OnboardingStage", "type": "string"},
+            {"id": "LastContact", "displayName": "LastContact", "type": "string"},
+            {"id": "Status", "displayName": "Status", "type": "string"}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1280, 16],
+      "id": "30ad59d8-4af9-4aa8-90ec-299b9d1db094",
+      "name": "Update data in sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2},
+          "conditions": [
+            {"leftValue": "={{ $json.Status }}", "rightValue": "Active", "operator": {"type": "string", "operation": "equals"}},
+            {"leftValue": "={{ $json.OnboardingStage }}", "rightValue": "Completed", "operator": {"type": "string", "operation": "notEquals"}},
+            {"leftValue": "={{ $json.OnboardingStage }}", "rightValue": "KYC_Pending", "operator": {"type": "string", "operation": "notEquals"}}
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [384, 16],
+      "id": "927522df-1cf1-4eaa-b7f7-24bbd70c46b1",
+      "name": "If"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {"main": [[{"node": "Read data from sheet", "type": "main", "index": 0}]]},
+    "AI Agent": {"main": [[{"node": "Send email to customers", "type": "main", "index": 0}]]},
+    "Google Gemini Chat Model": {"ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]},
+    "Read data from sheet": {"main": [[{"node": "If", "type": "main", "index": 0}]]},
+    "Send email to customers": {"main": [[{"node": "Update data in sheet", "type": "main", "index": 0}]]},
+    "Update data in sheet": {"main": [[]]},
+    "If": {"main": [[{"node": "AI Agent", "type": "main", "index": 0}]]}
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "cleaned-safe-share"
+}
