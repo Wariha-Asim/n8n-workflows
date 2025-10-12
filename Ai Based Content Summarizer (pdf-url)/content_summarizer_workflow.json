@@ -1,0 +1,179 @@
+{
+  "name": "PDF Summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pdf-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-624, -32],
+      "id": "webhook",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.type }}",
+              "rightValue": "pdf",
+              "operator": {"type": "string", "operation": "equals"}
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-432, -32],
+      "id": "if-node",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.file_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-160, -64],
+      "id": "pdf-http",
+      "name": "PDF Flow Http"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [32, -80],
+      "id": "extract-file",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [176, 224],
+      "id": "gemini-model",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "sendTo": "user@company.com",
+        "subject": "Content Summary – {{ $json.Type }} from {{ $json.Source }}",
+        "emailType": "text",
+        "message": "Hello,\n\nYour requested content has been successfully summarized.\n\n📌 Source: {{ $json.Source }}\n\n📝 Summary:\n{{ $json.Summary }}\n⏱ Date/Time: {{ $now }}\n\nBest regards,\nAI Summarizer Workflow (n8n)",
+        "options": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [768, -16],
+      "id": "send-email",
+      "name": "Send Email"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "PDF_Summarizer_Sheet",
+        "sheetName": "Sheet1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Type": "={{ $json.body.type }}",
+            "Source": "={{ $json.body.file_url }}",
+            "Summary": "={{ $json.output }}",
+            "DateTime": "={{ $now }}"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [528, 16],
+      "id": "append-sheet",
+      "name": "Append to Sheet"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an expert content summarizer. Summarize the following text into clear and concise bullet points, no more than 200 words. Focus only on the key information and main ideas. Do not include filler words or irrelevant details.\n\nText to summarize: {{ $json.text || $json.body || $json.data }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [208, 16],
+      "id": "ai-agent",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.file_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-160, 144],
+      "id": "url-http",
+      "name": "URL Flow Http"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "If", "type": "main", "index": 0}]]
+    },
+    "If": {
+      "main": [
+        [{"node": "PDF Flow Http", "type": "main", "index": 0}],
+        [{"node": "URL Flow Http", "type": "main", "index": 0}]
+      ]
+    },
+    "PDF Flow Http": {
+      "main": [[{"node": "Extract from File", "type": "main", "index": 0}]]
+    },
+    "Extract from File": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Send Email": {
+      "main": [[]]
+    },
+    "Append to Sheet": {
+      "main": [[{"node": "Send Email", "type": "main", "index": 0}]]
+    },
+    "AI Agent": {
+      "main": [[{"node": "Append to Sheet", "type": "main", "index": 0}]]
+    },
+    "URL Flow Http": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
