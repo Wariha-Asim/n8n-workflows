@@ -1,0 +1,182 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-608, -32],
+      "id": "318e62e1-d73d-4e22-ad71-0ca14180981a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Data Analytics Assistant. Analyze these KPIs and provide actionable business insights.\n\nKPI Data:\n- Metric: {{ $json.KPI_Name }}\n- Category: {{ $json.Category }} \n- Current Value: {{ $json.Current_Value }}\n- Previous Value: {{ $json.Previous_Value }}\n- Growth: {{ $json.Growth_Percent }}%\n- Status: {{ $json.Status }}\n- Priority: {{ $json.Priority }}\n\nProvide a concise 2-line analysis:\n1. What this trend means for business\n2. Recommended action\n\nExample:\n\"User growth increased 15% - strong acquisition. Focus on retention to maintain momentum.\"\n\"Revenue declined 8% - need investigation. Check pricing and customer churn.\"",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [16, -32],
+      "id": "afdb8cf4-9b4d-4b51-b5cd-fe7731db3cdd",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-09-2025",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [0, 208],
+      "id": "43789032-63de-49d7-ba47-bf3c72b153b7",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst allSummaries = items.map(item => item.json.output).join(\"\\n\\n\"); \nreturn [{ json: { CombinedSummary: allSummaries } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, -32],
+      "id": "75b56ceb-d21b-4cd3-abee-94de01a427a6",
+      "name": "AggregateSummaries"
+    },
+    {
+      "parameters": {
+        "sendTo": "=hr@company.com",
+        "subject": "=Weekly KPI Digest - Business Performance | {{$now.format(\"DD\")}}",
+        "emailType": "text",
+        "message": "=Hello Management Team,\n\nHere is your weekly KPI performance summary:\n\n{{ $json.CombinedSummary }}\n\nBest regards,\nData Analytics Bot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [608, -32],
+      "id": "0e712e44-2187-42ca-9caa-77093dd74467",
+      "name": "Send Email to HR"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10mLriJalgQMcRC27XC8BHhqon7T4kD2oFip9xIkQ35k",
+          "mode": "list",
+          "cachedResultName": "KPI Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10mLriJalgQMcRC27XC8BHhqon7T4kD2oFip9xIkQ35k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10mLriJalgQMcRC27XC8BHhqon7T4kD2oFip9xIkQ35k/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-416, -32],
+      "id": "92b4c428-8cb7-4b01-9d97-2075a4af48ad",
+      "name": "KPI Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Data Analytics - KPI Calculations (Updated for your dataset)\nconst items = $input.all();\n\nconst processedItems = items.map(item => {\n  const current = parseFloat(item.json.Current_Value) || 0;\n  const previous = parseFloat(item.json.Previous_Value) || 0;\n  const target = parseFloat(item.json.Target_Value) || 0;\n  const growthPercent = parseFloat(item.json['Change_%']) || 0;\n  let newStatus = item.json.Status;\n  let priority = 'Normal';\n  if (item.json.KPI_Name.includes('Churn')) {\n    if (current > target) {\n      newStatus = 'High Priority';\n      priority = 'High';\n    } else if (current <= target * 0.8) {\n      newStatus = 'Excellent';\n      priority = 'Low';\n    }\n  } else if (item.json.KPI_Name.includes('Revenue') || item.json.KPI_Name.includes('Users') || item.json.KPI_Name.includes('Downloads')) {\n    if (current < target * 0.8) {\n      newStatus = 'Needs Focus';\n      priority = 'High';\n    } else if (current >= target * 1.2) {\n      newStatus = 'Exceeding';\n      priority = 'Low';\n    }\n  } else if (item.json.KPI_Name.includes('Support Tickets')) {\n    if (current > target * 1.2) {\n      newStatus = 'Critical';\n      priority = 'High';\n    } else if (current <= target * 0.8) {\n      newStatus = 'Excellent';\n      priority = 'Low';\n    }\n  }\n  let actionRequired = 'Monitor';\n  if (priority === 'High') actionRequired = 'Immediate Action';\n  if (newStatus === 'Exceeding') actionRequired = 'Scale Success';\n  if (newStatus === 'Excellent') actionRequired = 'Maintain';\n  return {\n    json: {\n      ...item.json,\n      Growth_Percent: growthPercent,\n      Calculated_Status: newStatus,\n      Priority: priority,\n      Action_Required: actionRequired,\n      ShouldProcess: item.json.Active === 'Yes'\n    }\n  };\n});\nreturn processedItems.filter(item => item.json.ShouldProcess);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-208, -32],
+      "id": "0eb0f872-5793-4f1f-b6d1-35863b594bc2",
+      "name": "Data Processing"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "10mLriJalgQMcRC27XC8BHhqon7T4kD2oFip9xIkQ35k",
+          "mode": "list",
+          "cachedResultName": "KPI Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10mLriJalgQMcRC27XC8BHhqon7T4kD2oFip9xIkQ35k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TGTANGksIx7cn0DWuanlqmzQVJdviC4PZHyRYaisumU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Status": "=Processed",
+            "KPI_ID": "={{ $('Data Processing').item.json.KPI_ID }}",
+            "KPI_Name": "={{ $('Data Processing').item.json.KPI_Name }}",
+            "Category": "={{ $('Data Processing').item.json.Category }}",
+            "Current_Value": "={{ $('Data Processing').item.json.Current_Value }}",
+            "Previous_Value": "={{ $('Data Processing').item.json.Previous_Value }}",
+            "Target_Value": "={{ $('Data Processing').item.json.Target_Value }}",
+            "Change_%": "={{ $('Data Processing').item.json['Change_%'] }}",
+            "Active": "={{$now}}"
+          },
+          "matchingColumns": ["KPI_ID"]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [464, 224],
+      "id": "d8c9ea0c-8faa-45a6-9b63-a3e1e88d09c0",
+      "name": "Update KPI Data in Sheet"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [{ "node": "KPI Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          { "node": "AggregateSummaries", "type": "main", "index": 0 },
+          { "node": "Update KPI Data in Sheet", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "AggregateSummaries": {
+      "main": [
+        [{ "node": "Send Email to HR", "type": "main", "index": 0 }]
+      ]
+    },
+    "KPI Data": {
+      "main": [
+        [{ "node": "Data Processing", "type": "main", "index": 0 }]
+      ]
+    },
+    "Data Processing": {
+      "main": [
+        [{ "node": "AI Agent", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
