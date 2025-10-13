@@ -63,6 +63,20 @@ This repository contains a collection of n8n workflows designed to automate and 
 - Can read emails, generate replies, and send emails automatically via Gmail.
 - Maintains memory for context-aware email conversations.
 
+### 7. AI Business Analytics Automation  
+**Folder:** AI-Business-Analytics-Automation
+**Description:** Automates business analytics and reporting by combining AI-powered insights with real-time data tracking to help teams make faster, data-driven decisions.  
+
+**Features:**  
+- Fetches business and marketing data automatically from Google Sheets or APIs.  
+- Uses Google Gemini LLM (via LangChain) to generate performance summaries, insights, and recommendations.  
+- Analyzes KPIs such as revenue growth, ROI, and campaign efficiency dynamically.  
+- Generates AI-written summary reports for team review.  
+- Sends reports automatically via Gmail or Slack to keep stakeholders updated.  
+- Updates Google Sheets with analyzed metrics, timestamps, and key insights.  
+- Can be scheduled to run daily, weekly, or monthly for continuous reporting.  
+
+
 ## Key Features Across All Workflows
 - **AI Integration:** Intelligent content generation using Google Gemini through n8n’s AI nodes.  
 - **Automation:** Fully automated scheduling via Schedule Trigger nodes.  
@@ -86,6 +100,8 @@ n8n-workflows/
 │  └─ content_summarizer_workflow.json
 ├─ Email-AI-Agent-Chatbot/
 │  └─ email_ai_agent_workflow.json
+|─ AI-Business-Analytics-Automation
+|   └─ business_workflow.json
 └─ README.md
 
 ## Notes for Setup
