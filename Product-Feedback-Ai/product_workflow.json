@@ -1,0 +1,163 @@
+{
+  "name": "Product Feedback Loops",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-256, -224],
+      "id": "schedule-trigger-product",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a product feedback analyst.\nAnalyze the following customer feedback and give insights.\n\nCustomer: {{ $json['Customer Name'] }}\nRating: {{ $json['Rating'] }}/5\nNPS Category: {{ $json.NPSCategory }}\nCategory: {{ $json['Category'] }}\nSentiment: {{ $json.Sentiment }}\nFeedback: {{ $json['Feedback'] }}\n\nProvide a short 2-line output:\n1. Key insight (include NPS context)\n2. Recommended action for the {{ $json.RouteTo }} team",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [352, -224],
+      "id": "ai-agent-product",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "documentId": "feedback-data-sheet",
+        "sheetName": "Form Responses 1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-64, -224],
+      "id": "feedback-data",
+      "name": "Feedback Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst processedItems = items.map(item => {\n  item.json.Status = item.json.Status || \"New\";\n  item.json[\"Last Processed\"] = item.json[\"Last Processed\"] || \"NULL\";\n\n  const rating = parseInt(item.json[\"Rating\"]) || 0;\n  const category = (item.json[\"Category\"] || \"\").toString().trim();\n  const feedback = (item.json[\"Feedback\"] || \"\").toString().trim();\n\n  let sentiment = 'Neutral';\n  if (rating >= 4) sentiment = 'Positive';\n  if (rating <= 2) sentiment = 'Negative';\n\n  let npsCategory = 'Detractor';\n  if (rating >= 9) npsCategory = 'Promoter';\n  else if (rating >= 7) npsCategory = 'Passive';\n\n  let priority = 'Low';\n  if (sentiment === 'Negative' && category.includes('Complaint')) priority = 'High';\n  if (sentiment === 'Negative' && category.includes('Bug')) priority = 'High';\n  if (sentiment === 'Positive' && category.includes('Feature')) priority = 'Medium';\n\n  let routeTo = 'Product';\n  if (category.includes('Bug')) routeTo = 'Tech';\n  else if (category.includes('Complaint')) routeTo = 'Support';\n  else if (sentiment === 'Positive') routeTo = 'Marketing';\n\n  return {\n    json: {\n      ...item.json,\n      Sentiment: sentiment,\n      NPSCategory: npsCategory,\n      Priority: priority,\n      RouteTo: routeTo,\n      ShouldProcess: item.json.Status === 'New'\n    }\n  };\n});\n\nreturn processedItems.filter(item => item.json.ShouldProcess);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [144, -224],
+      "id": "process-feedback",
+      "name": "Process Feedback"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [384, 48],
+      "id": "ai-model-product",
+      "name": "AI Feedback Analyst"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.RouteTo === \"Tech\" ? \"tech_team@company.com\" : $json.RouteTo === \"Support\" ? \"support_team@company.com\" : $json.RouteTo === \"Marketing\" ? \"marketing_team@company.com\" : \"product_team@company.com\" }}",
+        "subject": "=Weekly Feedback Alert - {{ $json.CustomerName }}",
+        "emailType": "text",
+        "message": "=Hello {{ $json.RouteTo }} Team,\n\nNew customer feedback received:\n\nCustomer: {{ $json.CustomerName }}\nCategory: {{ $json.Category }}\nNPS: {{ $json.NPSCategory }}\nSentiment: {{ $json.Sentiment }}\nPriority: {{ $json.Priority }}\nFeedback: {{ $json.AI_Insight }}\n\nPlease take the necessary action.\n\nRegards,\nFeedback Bot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [960, -224],
+      "id": "send-email-product",
+      "name": "Send Feedback Digest"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": "feedback-data-sheet",
+        "sheetName": "Form Responses 1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Team Actions').item.json['Last Processed'] }}",
+            "Email Address": "={{ $('Process Feedback').item.json['Email Address'] }}",
+            "Customer Name": "={{ $('Process Feedback').item.json['Customer Name'] }}",
+            "Rating": "={{ $('Process Feedback').item.json['Rating'] }}",
+            "Category": "={{ $('Process Feedback').item.json['Category'] }}",
+            "Feedback": "={{ $('Process Feedback').item.json['Feedback'] }}",
+            "Status": "Processed",
+            "Last Processed": "={{$now}}"
+          },
+          "matchingColumns": ["Email Address"]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1232, -240],
+      "id": "update-feedback",
+      "name": "update feedback data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "team-actions-sheet",
+        "sheetName": "Sheet1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CustomerName": "={{ $('Process Feedback').item.json['Customer Name'] }}",
+            "FeedbackID": "={{ $('Feedback Data').item.json.row_number }}",
+            "Sentiment": "={{ $('Process Feedback').item.json.Sentiment }}",
+            "NPSCategory": "={{ $('Process Feedback').item.json.NPSCategory }}",
+            "Category": "={{ $('Process Feedback').item.json['Category'] }}",
+            "Priority": "={{ $('Process Feedback').item.json.Priority }}",
+            "RouteTo": "={{ $('Process Feedback').item.json.RouteTo }}",
+            "AI_Insight": "={{ $json.output }}",
+            "Last Processed": "={{$now}}",
+            "Status": "Processed"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [720, -224],
+      "id": "team-actions",
+      "name": "Team Actions"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "Feedback Data", "type": "main", "index": 0}]]
+    },
+    "AI Agent": {
+      "main": [[{"node": "Team Actions", "type": "main", "index": 0}]]
+    },
+    "Feedback Data": {
+      "main": [[{"node": "Process Feedback", "type": "main", "index": 0}]]
+    },
+    "Process Feedback": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "AI Feedback Analyst": {
+      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Send Feedback Digest": {
+      "main": [[{"node": "update feedback data", "type": "main", "index": 0}]]
+    },
+    "Team Actions": {
+      "main": [[{"node": "Send Feedback Digest", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "safe-share"
+}
