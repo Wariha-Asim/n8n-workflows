@@ -74,7 +74,20 @@ This repository contains a collection of n8n workflows designed to automate and 
 - Generates AI-written summary reports for team review.  
 - Sends reports automatically via Gmail or Slack to keep stakeholders updated.  
 - Updates Google Sheets with analyzed metrics, timestamps, and key insights.  
-- Can be scheduled to run daily, weekly, or monthly for continuous reporting.  
+- Can be scheduled to run daily, weekly, or monthly for continuous reporting.
+
+### 8. Product Feedback Loops
+**Folder:** Product Feedback Loops
+**Description:** Automates customer feedback analysis, generates AI insights, and routes feedback to the right teams.
+
+**Features:**
+- Reads feedback from Google Sheets.
+- Determines Sentiment, NPS Category, Priority, and RouteTo team.
+- Uses AI agent to generate key insights and recommended actions.
+- Sends feedback digest emails to Tech, Support, Marketing, or Product teams.
+- Updates Google Sheets with processed status and AI insights.
+- Runs automatically via daily schedule.
+
 
 
 ## Key Features Across All Workflows
@@ -102,6 +115,8 @@ n8n-workflows/
 │  └─ email_ai_agent_workflow.json
 |─ AI-Business-Analytics-Automation
 |   └─ business_workflow.json
+|─ Product Feedback Loops
+|   └─ product_workflow.json
 └─ README.md
 
 ## Notes for Setup
